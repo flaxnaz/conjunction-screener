@@ -3,7 +3,11 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 
 from conjunction_screener.propagator import PropagatedTrack
-from conjunction_screener.screener import compute_distances, screen_conjunctions
+from conjunction_screener.screener import (
+    compute_distances,
+    screen_conjunctions,
+    summarize_closest_approaches,
+)
 
 
 def _track(norad_id: int, name: str, positions: np.ndarray) -> PropagatedTrack:
@@ -73,9 +77,67 @@ def test_screen_conjunctions_sorted_closest_first():
 
     assert [e.norad_id for e in events] == [3, 2]
 
+
 def test_screen_conjunctions_skips_mismatched_grid():
     primary = _track(1, "PRIMARY", np.zeros((5, 3)))
     mismatched = _track(2, "MISMATCH", np.zeros((4, 3)))
 
     events = screen_conjunctions(primary, [mismatched], threshold_km=100.0)
     assert events == []
+
+
+def test_screen_conjunctions_excludes_colocated_duplicate():
+    """A catalog entry that stays at a constant near-zero distance the
+    whole window (e.g. a duplicate NORAD ID for the same physical object,
+    like an ISS module) should not be flagged as a genuine conjunction."""
+    n = 10
+    primary = _track(1, "PRIMARY", np.zeros((n, 3)))
+
+    # Constant 0.1 km offset every timestep -> no variation -> co-located duplicate
+    colocated_pos = np.full((n, 3), 0.1)
+    colocated = _track(2, "ISS (DUPLICATE MODULE)", colocated_pos)
+
+    # Genuine transient close approach: dips to 2 km, otherwise far away
+    genuine_pos = np.full((n, 3), 50.0)
+    genuine_pos[5] = [2.0, 0.0, 0.0]
+    genuine = _track(3, "GENUINE", genuine_pos)
+
+    events = screen_conjunctions(
+        primary, [colocated, genuine], threshold_km=10.0
+    )
+
+    assert [e.norad_id for e in events] == [3]
+
+
+def test_summarize_closest_approaches_covers_every_object():
+    n = 10
+    primary = _track(1, "PRIMARY", np.zeros((n, 3)))
+
+    colocated_pos = np.full((n, 3), 0.1)
+    colocated = _track(2, "ISS (DUPLICATE MODULE)", colocated_pos)
+
+    genuine_pos = np.full((n, 3), 50.0)
+    genuine_pos[5] = [2.0, 0.0, 0.0]
+    genuine = _track(3, "GENUINE", genuine_pos)
+
+    far_pos = np.array(
+        [[100.0 + i, 100.0, 100.0] for i in range(n)], dtype=float
+    )
+    far = _track(4, "FAR", far_pos)
+
+    summaries = summarize_closest_approaches(
+        primary, [colocated, genuine, far], threshold_km=10.0
+    )
+
+    by_id = {s.norad_id: s for s in summaries}
+    assert set(by_id) == {2, 3, 4}
+
+    assert by_id[2].is_colocated is True
+    assert by_id[2].is_flagged is False  # co-located, never a genuine flag
+
+    assert by_id[3].is_colocated is False
+    assert by_id[3].is_flagged is True
+    assert by_id[3].miss_distance_km == 2.0
+
+    assert by_id[4].is_colocated is False
+    assert by_id[4].is_flagged is False

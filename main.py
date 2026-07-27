@@ -19,13 +19,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from conjunction_screener.auth import get_client
+from conjunction_screener.dashboard import write_html_dashboard
 from conjunction_screener.fetcher import (
     fetch_orbital_regime_catalog,
     fetch_primary_and_conjunctors,
 )
 from conjunction_screener.propagator import propagate_all, propagate_track
 from conjunction_screener.reporter import plot_miss_distances, write_csv_report
-from conjunction_screener.screener import DEFAULT_THRESHOLD_KM, screen_conjunctions
+from conjunction_screener.screener import (
+    DEFAULT_THRESHOLD_KM,
+    screen_conjunctions,
+    summarize_closest_approaches,
+)
 
 ISS_NORAD_ID = 25544
 
@@ -106,10 +111,20 @@ def main() -> None:
     )
 
     events = screen_conjunctions(primary_track, conjunctor_tracks, args.threshold_km)
+    summaries = summarize_closest_approaches(
+        primary_track, conjunctor_tracks, args.threshold_km
+    )
 
     csv_path = write_csv_report(events, out_dir / "conjunction_report.csv")
     plot_path = plot_miss_distances(
         primary_track, events, out_dir / "miss_distance.png", args.threshold_km
+    )
+    dashboard_path = write_html_dashboard(
+        primary_track,
+        summaries,
+        args.threshold_km,
+        args.window_hours,
+        out_dir / "dashboard.html",
     )
 
     print(f"Primary: {primary_track.name} (NORAD {primary_track.norad_id})")
@@ -122,6 +137,7 @@ def main() -> None:
         )
     print(f"Report written to: {csv_path}")
     print(f"Plot written to:   {plot_path}")
+    print(f"Dashboard written to: {dashboard_path}")
 
 
 if __name__ == "__main__":
