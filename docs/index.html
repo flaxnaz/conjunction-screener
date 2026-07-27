@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Conjunction Screening — ISS (ZARYA)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #0a0e14;
+    --panel: #121822;
+    --panel-border: #1f2b38;
+    --grid: #223042;
+    --text-primary: #e7edf3;
+    --text-dim: #6f8299;
+    --track: #4fb2f0;
+    --threshold: #f0b429;
+    --flag: #ff5c5c;
+    --clear: #3ddc97;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(circle at 50% 0%, #0d1420 0%, var(--void) 60%);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 48px 32px 64px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--track);
+    text-transform: uppercase;
+  }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 34px;
+    margin: 8px 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0 0 32px;
+  }
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .kpi-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .kpi-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 26px;
+    font-weight: 500;
+    margin-top: 6px;
+    color: var(--text-primary);
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .panel-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+  }
+  .panel-caption {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin: 0 0 18px;
+  }
+  .sweep-wrap { display: flex; justify-content: center; }
+  svg { width: 100%; max-width: 480px; }
+  .sweep-ring { fill: none; stroke: #35485f; stroke-width: 1; opacity: 0.9; }
+  .sweep-ring-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    fill: var(--text-dim);
+  }
+  .sweep-tick { stroke: #35485f; stroke-width: 1.4; }
+  .sweep-tick-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    fill: var(--text-dim);
+  }
+  .sweep-threshold {
+    fill: none;
+    stroke: var(--threshold);
+    stroke-width: 1.6;
+    stroke-dasharray: 5 4;
+    opacity: 0.95;
+  }
+  .sweep-threshold-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    fill: var(--threshold);
+  }
+  .sweep-blip-clear { fill: var(--track); opacity: 0.75; }
+  .sweep-blip-flag { fill: var(--flag); }
+  .sweep-halo { fill: var(--flag); opacity: 0.18; }
+  .sweep-blip-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    fill: var(--flag);
+  }
+  .sweep-crosshair { stroke: var(--text-dim); stroke-width: 1; }
+  .sweep-primary { fill: var(--track); }
+  .legend {
+    display: flex;
+    gap: 22px;
+    justify-content: center;
+    margin-top: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .status-pill {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+  .status-clear { background: rgba(61, 220, 151, 0.12); color: var(--clear); }
+  .status-flag { background: rgba(255, 92, 92, 0.12); color: var(--flag); }
+  .status-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0;
+  }
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    margin-top: 8px;
+  }
+  .results-table th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 500;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--panel-border);
+    text-transform: uppercase;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+  }
+  .results-table td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--panel-border);
+    color: var(--text-primary);
+  }
+  footer {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 24px;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Space Situational Awareness · Screening Pass</div>
+  <h1>ISS (ZARYA)</h1>
+  <p class="subtitle">NORAD 25544 · 48h window · 25 km threshold · generated 2026-07-27 06:54:21 UTC</p>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Objects screened</div>
+      <div class="kpi-value">97</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Flagged</div>
+      <div class="kpi-value">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Closest approach</div>
+      <div class="kpi-value">43.68 km</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Window</div>
+      <div class="kpi-value">48h</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">Screening sweep</p>
+    <p class="panel-caption">Angle = time of closest approach within the window · radius = miss distance</p>
+    <div class="sweep-wrap"><svg viewBox="0 0 560 560" xmlns="http://www.w3.org/2000/svg"><circle cx="280.0" cy="280.0" r="55.0" class="sweep-ring" /><text x="286.0" y="237.0" class="sweep-ring-label">3096 km</text><circle cx="280.0" cy="280.0" r="110.0" class="sweep-ring" /><text x="286.0" y="182.0" class="sweep-ring-label">6192 km</text><circle cx="280.0" cy="280.0" r="165.0" class="sweep-ring" /><text x="286.0" y="127.0" class="sweep-ring-label">9289 km</text><circle cx="280.0" cy="280.0" r="220.0" class="sweep-ring" /><text x="286.0" y="72.0" class="sweep-ring-label">12385 km</text><line x1="280.0" y1="66.0" x2="280.0" y2="54.0" class="sweep-tick" /><text x="280.0" y="38.0" class="sweep-tick-label" text-anchor="middle">T+0h</text><line x1="494.0" y1="280.0" x2="506.0" y2="280.0" class="sweep-tick" /><text x="522.0" y="280.0" class="sweep-tick-label" text-anchor="middle">T+12h</text><line x1="280.0" y1="494.0" x2="280.0" y2="506.0" class="sweep-tick" /><text x="280.0" y="522.0" class="sweep-tick-label" text-anchor="middle">T+24h</text><line x1="66.0" y1="280.0" x2="54.0" y2="280.0" class="sweep-tick" /><text x="38.0" y="280.0" class="sweep-tick-label" text-anchor="middle">T+36h</text><circle cx="280.0" cy="280.0" r="0.4" class="sweep-threshold" /><text x="280.3" y="280.3" class="sweep-threshold-label">THRESHOLD 25 KM</text><circle cx="280.0" cy="80.0" r="3.5" class="sweep-blip-clear" /><circle cx="278.4" cy="278.9" r="3.5" class="sweep-blip-clear" /><circle cx="281.6" cy="283.5" r="3.5" class="sweep-blip-clear" /><circle cx="277.1" cy="279.1" r="3.5" class="sweep-blip-clear" /><circle cx="279.8" cy="229.6" r="3.5" class="sweep-blip-clear" /><circle cx="279.7" cy="218.5" r="3.5" class="sweep-blip-clear" /><circle cx="289.1" cy="218.9" r="3.5" class="sweep-blip-clear" /><circle cx="268.4" cy="156.9" r="3.5" class="sweep-blip-clear" /><circle cx="276.3" cy="275.1" r="3.5" class="sweep-blip-clear" /><circle cx="285.8" cy="181.0" r="3.5" class="sweep-blip-clear" /><circle cx="279.1" cy="282.0" r="3.5" class="sweep-blip-clear" /><circle cx="277.1" cy="278.4" r="3.5" class="sweep-blip-clear" /><circle cx="281.8" cy="203.5" r="3.5" class="sweep-blip-clear" /><circle cx="251.3" cy="129.1" r="3.5" class="sweep-blip-clear" /><circle cx="280.6" cy="268.0" r="3.5" class="sweep-blip-clear" /><circle cx="276.1" cy="99.7" r="3.5" class="sweep-blip-clear" /><circle cx="284.7" cy="223.6" r="3.5" class="sweep-blip-clear" /><circle cx="276.9" cy="276.8" r="3.5" class="sweep-blip-clear" /><circle cx="271.8" cy="181.1" r="3.5" class="sweep-blip-clear" /><circle cx="281.1" cy="276.9" r="3.5" class="sweep-blip-clear" /><circle cx="282.3" cy="278.7" r="3.5" class="sweep-blip-clear" /><circle cx="281.9" cy="233.9" r="3.5" class="sweep-blip-clear" /><circle cx="283.2" cy="240.7" r="3.5" class="sweep-blip-clear" /><circle cx="279.2" cy="280.2" r="3.5" class="sweep-blip-clear" /><circle cx="259.5" cy="112.9" r="3.5" class="sweep-blip-clear" /><circle cx="272.7" cy="160.0" r="3.5" class="sweep-blip-clear" /><circle cx="279.8" cy="206.6" r="3.5" class="sweep-blip-clear" /><circle cx="283.1" cy="221.6" r="3.5" class="sweep-blip-clear" /><circle cx="275.9" cy="174.4" r="3.5" class="sweep-blip-clear" /><circle cx="282.6" cy="201.9" r="3.5" class="sweep-blip-clear" /><circle cx="283.1" cy="278.7" r="3.5" class="sweep-blip-clear" /><circle cx="289.4" cy="115.1" r="3.5" class="sweep-blip-clear" /><circle cx="280.8" cy="153.1" r="3.5" class="sweep-blip-clear" /><circle cx="284.2" cy="209.2" r="3.5" class="sweep-blip-clear" /><circle cx="278.6" cy="281.9" r="3.5" class="sweep-blip-clear" /><circle cx="278.8" cy="277.8" r="3.5" class="sweep-blip-clear" /><circle cx="272.0" cy="97.7" r="3.5" class="sweep-blip-clear" /><circle cx="277.3" cy="250.3" r="3.5" class="sweep-blip-clear" /><circle cx="290.8" cy="162.7" r="3.5" class="sweep-blip-clear" /><circle cx="278.5" cy="241.6" r="3.5" class="sweep-blip-clear" /><circle cx="289.8" cy="140.5" r="3.5" class="sweep-blip-clear" /><circle cx="278.6" cy="282.6" r="3.5" class="sweep-blip-clear" /><circle cx="284.6" cy="281.3" r="3.5" class="sweep-blip-clear" /><circle cx="281.9" cy="280.3" r="3.5" class="sweep-blip-clear" /><circle cx="282.2" cy="278.6" r="3.5" class="sweep-blip-clear" /><circle cx="279.0" cy="170.2" r="3.5" class="sweep-blip-clear" /><circle cx="274.0" cy="199.2" r="3.5" class="sweep-blip-clear" /><circle cx="278.5" cy="283.1" r="3.5" class="sweep-blip-clear" /><circle cx="275.6" cy="97.1" r="3.5" class="sweep-blip-clear" /><circle cx="285.6" cy="221.0" r="3.5" class="sweep-blip-clear" /><circle cx="277.7" cy="231.9" r="3.5" class="sweep-blip-clear" /><circle cx="281.5" cy="219.1" r="3.5" class="sweep-blip-clear" /><circle cx="280.7" cy="281.2" r="3.5" class="sweep-blip-clear" /><circle cx="277.6" cy="235.4" r="3.5" class="sweep-blip-clear" /><circle cx="267.8" cy="94.1" r="3.5" class="sweep-blip-clear" /><circle cx="278.5" cy="193.5" r="3.5" class="sweep-blip-clear" /><circle cx="279.3" cy="240.5" r="3.5" class="sweep-blip-clear" /><circle cx="265.7" cy="140.7" r="3.5" class="sweep-blip-clear" /><circle cx="277.4" cy="246.6" r="3.5" class="sweep-blip-clear" /><circle cx="275.1" cy="238.2" r="3.5" class="sweep-blip-clear" /><circle cx="284.5" cy="201.2" r="3.5" class="sweep-blip-clear" /><circle cx="280.9" cy="239.6" r="3.5" class="sweep-blip-clear" /><circle cx="275.6" cy="94.9" r="3.5" class="sweep-blip-clear" /><circle cx="280.0" cy="236.4" r="3.5" class="sweep-blip-clear" /><circle cx="281.9" cy="230.7" r="3.5" class="sweep-blip-clear" /><circle cx="280.0" cy="270.8" r="3.5" class="sweep-blip-clear" /><circle cx="279.8" cy="251.7" r="3.5" class="sweep-blip-clear" /><circle cx="279.8" cy="278.4" r="3.5" class="sweep-blip-clear" /><circle cx="280.0" cy="238.2" r="3.5" class="sweep-blip-clear" /><circle cx="285.9" cy="171.2" r="3.5" class="sweep-blip-clear" /><circle cx="280.7" cy="259.2" r="3.5" class="sweep-blip-clear" /><circle cx="282.5" cy="255.8" r="3.5" class="sweep-blip-clear" /><circle cx="275.6" cy="191.6" r="3.5" class="sweep-blip-clear" /><circle cx="277.3" cy="283.5" r="3.5" class="sweep-blip-clear" /><circle cx="280.9" cy="263.1" r="3.5" class="sweep-blip-clear" /><circle cx="281.4" cy="260.3" r="3.5" class="sweep-blip-clear" /><circle cx="276.4" cy="114.1" r="3.5" class="sweep-blip-clear" /><circle cx="289.1" cy="105.6" r="3.5" class="sweep-blip-clear" /><circle cx="280.9" cy="263.2" r="3.5" class="sweep-blip-clear" /><circle cx="282.7" cy="275.6" r="3.5" class="sweep-blip-clear" /><circle cx="284.7" cy="230.3" r="3.5" class="sweep-blip-clear" /><circle cx="281.9" cy="279.3" r="3.5" class="sweep-blip-clear" /><circle cx="283.3" cy="278.6" r="3.5" class="sweep-blip-clear" /><circle cx="281.8" cy="234.3" r="3.5" class="sweep-blip-clear" /><circle cx="277.3" cy="246.0" r="3.5" class="sweep-blip-clear" /><circle cx="281.4" cy="268.7" r="3.5" class="sweep-blip-clear" /><circle cx="277.7" cy="277.7" r="3.5" class="sweep-blip-clear" /><circle cx="285.4" cy="238.7" r="3.5" class="sweep-blip-clear" /><circle cx="285.4" cy="281.6" r="3.5" class="sweep-blip-clear" /><circle cx="307.5" cy="126.1" r="3.5" class="sweep-blip-clear" /><circle cx="280.0" cy="154.4" r="3.5" class="sweep-blip-clear" /><circle cx="277.2" cy="278.6" r="3.5" class="sweep-blip-clear" /><circle cx="272.0" cy="168.8" r="3.5" class="sweep-blip-clear" /><circle cx="280.8" cy="282.1" r="3.5" class="sweep-blip-clear" /><circle cx="280.1" cy="274.3" r="3.5" class="sweep-blip-clear" /><circle cx="279.7" cy="234.9" r="3.5" class="sweep-blip-clear" /><circle cx="278.0" cy="256.4" r="3.5" class="sweep-blip-clear" /><line x1="266.0" y1="280.0" x2="294.0" y2="280.0" class="sweep-crosshair" /><line x1="280.0" y1="266.0" x2="280.0" y2="294.0" class="sweep-crosshair" /><circle cx="280.0" cy="280.0" r="5" class="sweep-primary" /></svg></div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--track)"></span>screened</span>
+      <span><span class="dot" style="background:var(--flag)"></span>flagged</span>
+      <span><span class="dot" style="background:var(--threshold)"></span>threshold ring</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">Result</p>
+    <div class="status-pill status-clear">CLEAR</div><p class="status-text">No object crossed the 25 km flagging threshold across the 48-hour window.</p>
+  </div>
+
+  <footer>
+    <span>Data: Space-Track (TLE) · SGP4 propagation</span>
+    <span>conjunction-screener</span>
+  </footer>
+</div>
+</body>
+</html>
