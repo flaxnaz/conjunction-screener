@@ -69,6 +69,12 @@ def test_plot_miss_distances_creates_file(tmp_path: Path):
     assert out.stat().st_size > 0
 
 
+def test_plot_miss_distances_handles_no_events(tmp_path: Path):
+    primary = _primary_track()
+    out = plot_miss_distances(primary, [], tmp_path / "plot_empty.png")
+    assert out.exists()
+
+
 def test_write_cdm_csv_report_with_events(tmp_path: Path):
     from conjunction_screener.cdm import CDMEvent
 
