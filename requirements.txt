@@ -1,0 +1,7 @@
+spacetrack>=1.2.2
+sgp4>=2.23
+numpy>=1.26
+matplotlib>=3.8
+python-dotenv>=1.0
+pytest>=8.0
+mypy>=1.10
