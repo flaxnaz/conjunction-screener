@@ -65,13 +65,13 @@ def test_screen_conjunctions_sorted_closest_first():
     n = 3
     primary = _track(1, "PRIMARY", np.zeros((n, 3)))
 
-    obj_a = _track(2, "A", np.full((n, 3), 4.0))  # ~6.93 km
-    obj_b = _track(3, "B", np.full((n, 3), 1.0))  # ~1.73 km
+    # Both objects vary over time (not co-located), A stays farther than B
+    obj_a = _track(2, "A", np.array([[4.0, 4.0, 4.0], [5.0, 5.0, 5.0], [6.0, 6.0, 6.0]]))
+    obj_b = _track(3, "B", np.array([[1.0, 1.0, 1.0], [2.0, 2.0, 2.0], [3.0, 3.0, 3.0]]))
 
     events = screen_conjunctions(primary, [obj_a, obj_b], threshold_km=10.0)
 
     assert [e.norad_id for e in events] == [3, 2]
-
 
 def test_screen_conjunctions_skips_mismatched_grid():
     primary = _track(1, "PRIMARY", np.zeros((5, 3)))
