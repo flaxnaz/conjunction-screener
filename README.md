@@ -75,6 +75,23 @@ have CDM access (`cdm` is a restricted class for some account tiers),
 this will return an authorization error — the `main.py` SGP4 screening
 path works regardless.
 
+## Live dashboard
+
+`main.py` also writes a self-contained HTML dashboard (`reports/dashboard.html`)
+with KPI cards and a radial "screening sweep" chart (angle = time of
+closest approach in the window, radius = miss distance). A scheduled
+GitHub Actions workflow (`.github/workflows/refresh-dashboard.yml`)
+re-runs the screening pass every 6 hours and publishes the result to
+`docs/index.html`, which GitHub Pages serves — so the hosted dashboard
+actually stays current rather than being a one-time snapshot. It can
+also be triggered manually from the Actions tab (`workflow_dispatch`).
+
+Requires the `SPACETRACK_IDENTITY` and `SPACETRACK_PASSWORD` repository
+secrets to be set (Settings → Secrets and variables → Actions), and the
+repository's Actions workflow permissions set to "Read and write
+permissions" (Settings → Actions → General) so the workflow can push
+its own commits.
+
 ## Project layout
 
 conjunction_screener/

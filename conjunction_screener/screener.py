@@ -1,10 +1,4 @@
-"""Miss-distance calculation and conjunction flagging.
-
-For a primary track and a list of conjunctor tracks (already propagated
-on the same time grid), computes the Euclidean distance at every
-timestep and flags any pair whose minimum distance drops below a
-threshold.
-"""
+"""Miss-distance calculation and conjunction flagging."""
 
 from __future__ import annotations
 
@@ -17,16 +11,6 @@ from conjunction_screener.propagator import PropagatedTrack
 
 DEFAULT_THRESHOLD_KM = 5.0
 
-# Some catalog entries (e.g. individual ISS modules like ZVEZDA, UNITY,
-# DESTINY, POISK) are permanently co-located with their parent object —
-# they've never independently orbited anything, and Space-Track publishes
-# essentially the same elements for all of them. Their distance to the
-# primary stays flat near zero for the whole window, which is a duplicate
-# catalog entry, not a conjunction. A genuine conjunction between two
-# independently orbiting objects shows the distance dip and recover as
-# their orbits cross; requiring some minimum spread between the closest
-# and farthest separation over the window screens out the flat, co-located
-# case without needing a hardcoded exclusion list.
 DEFAULT_MIN_SEPARATION_VARIATION_KM = 0.5
 
 
@@ -101,13 +85,7 @@ def summarize_closest_approaches(
 def compute_distances(
     primary: PropagatedTrack, conjunctor: PropagatedTrack
 ) -> np.ndarray:
-    """Return the per-timestep distance (km) between two tracks.
-
-    Requires both tracks to share the same time grid (same length, same
-    start/timestep) — this is guaranteed when both were produced by
-    `propagate_all`/`propagate_track` with matching start_time, window,
-    and timestep arguments.
-    """
+    """Return the per-timestep distance (km) between two tracks."""
     if primary.positions_km.shape != conjunctor.positions_km.shape:
         raise ValueError(
             f"Track length mismatch between primary ({primary.positions_km.shape}) "
@@ -126,34 +104,36 @@ def screen_conjunctions(
 ) -> list[ConjunctionEvent]:
     """Flag conjunctions below `threshold_km`, sorted by closest first.
 
-    Objects whose track doesn't share the primary's time grid are
-    skipped defensively (this shouldn't happen if both came from the
-    same propagate_all call, but a length mismatch is cheap to guard).
-
-    Objects that stay within `min_separation_variation_km` of the same
-    distance for the entire window are skipped as co-located catalog
-    duplicates rather than genuine conjunctions (see module docstring).
+    Delegates the actual flagging decision (threshold + co-location
+    check) to `summarize_closest_approaches` so there is one source of
+    truth for what counts as a genuine conjunction. Only re-derives the
+    full per-timestep distance series for objects that were actually
+    flagged, since that's the one thing `ConjunctionEvent` needs that
+    the lighter-weight summary doesn't carry.
     """
+    summaries = summarize_closest_approaches(
+        primary, conjunctors, threshold_km, min_separation_variation_km
+    )
+    flagged_ids = {s.norad_id for s in summaries if s.is_flagged}
+    if not flagged_ids:
+        return []
+
+    tracks_by_id = {t.norad_id: t for t in conjunctors}
     events: list[ConjunctionEvent] = []
-
-    for track in conjunctors:
-        if track.positions_km.shape != primary.positions_km.shape:
+    for s in summaries:
+        if s.norad_id not in flagged_ids:
             continue
+        track = tracks_by_id[s.norad_id]
         distances = compute_distances(primary, track)
-        min_idx = int(np.argmin(distances))
-        min_dist = float(distances[min_idx])
-        spread = float(np.max(distances) - np.min(distances))
-
-        if min_dist <= threshold_km and spread >= min_separation_variation_km:
-            events.append(
-                ConjunctionEvent(
-                    norad_id=track.norad_id,
-                    name=track.name,
-                    time_of_closest_approach=primary.times[min_idx],
-                    miss_distance_km=min_dist,
-                    distances_km=distances,
-                )
+        events.append(
+            ConjunctionEvent(
+                norad_id=s.norad_id,
+                name=s.name,
+                time_of_closest_approach=s.time_of_closest_approach,
+                miss_distance_km=s.miss_distance_km,
+                distances_km=distances,
             )
+        )
 
     events.sort(key=lambda e: e.miss_distance_km)
     return events
