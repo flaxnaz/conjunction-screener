@@ -1,0 +1,51 @@
+name: Refresh dashboard
+
+# Re-runs the screening pass on a schedule (and on demand) and publishes
+# a fresh dashboard to docs/index.html, which GitHub Pages serves. This
+# is what makes the Pages URL an actually-updating dashboard rather than
+# a one-time snapshot someone has to manually regenerate and re-copy.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours
+  workflow_dispatch: {} # lets you trigger a refresh manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run screening pass
+        env:
+          SPACETRACK_IDENTITY: ${{ secrets.SPACETRACK_IDENTITY }}
+          SPACETRACK_PASSWORD: ${{ secrets.SPACETRACK_PASSWORD }}
+        run: |
+          python main.py --altitude-band-km 100 --threshold-km 25 --window-hours 48 --out reports
+
+      - name: Publish dashboard to docs/
+        run: |
+          mkdir -p docs
+          cp reports/dashboard.html docs/index.html
+
+      - name: Commit and push if the dashboard changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          git diff --staged --quiet || git commit -m "Auto-refresh dashboard"
+          git push
